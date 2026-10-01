@@ -1,0 +1,103 @@
+{
+  "n_songs": 2958,
+  "n_artists": 21,
+  "class_counts": {
+    "joy": 1554,
+    "trust": 420,
+    "sadness": 385,
+    "anger": 313,
+    "fear": 286
+  },
+  "cv_results": {
+    "Logistic Regression": {
+      "macro_f1": 0.543,
+      "accuracy": 0.698
+    },
+    "Linear SVM": {
+      "macro_f1": 0.559,
+      "accuracy": 0.712
+    },
+    "Complement NB": {
+      "macro_f1": 0.272,
+      "accuracy": 0.573
+    },
+    "Multinomial NB": {
+      "macro_f1": 0.14,
+      "accuracy": 0.526
+    }
+  },
+  "best_params": {
+    "clf__C": 10
+  },
+  "heldout_artists": [
+    "BTS",
+    "Beyonce",
+    "CharliePuth",
+    "JustinBieber",
+    "Khalid",
+    "Rihanna"
+  ],
+  "heldout": {
+    "accuracy": 0.812,
+    "macro_f1": 0.666,
+    "per_class": {
+      "anger": 0.59,
+      "fear": 0.596,
+      "joy": 0.899,
+      "sadness": 0.655,
+      "trust": 0.592
+    }
+  },
+  "top_words": {
+    "anger": [
+      "shit",
+      "damn",
+      "hit",
+      "bitch",
+      "kick",
+      "word",
+      "money",
+      "lying"
+    ],
+    "fear": [
+      "fire",
+      "watch",
+      "change",
+      "fever",
+      "hide",
+      "kill",
+      "disappear",
+      "monster"
+    ],
+    "joy": [
+      "love",
+      "baby",
+      "young",
+      "beautiful",
+      "love love",
+      "kiss",
+      "baby baby",
+      "smile"
+    ],
+    "sadness": [
+      "leave",
+      "cry",
+      "fall",
+      "late",
+      "lost",
+      "black",
+      "dark",
+      "lie"
+    ],
+    "trust": [
+      "show",
+      "real",
+      "top",
+      "trust",
+      "ground",
+      "wear",
+      "swear",
+      "truth"
+    ]
+  }
+}

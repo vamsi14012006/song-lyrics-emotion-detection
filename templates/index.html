@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lyric Mood</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e9edf5;--ink:#1c1f3a;--muted:#5d6385;--panel:#fff;--line:#c9d0e3;--accent:#3b3fd8;
+--joy:#f2a900;--sadness:#3b6fd8;--anger:#d83b3b;--trust:#1f9d8a;--fear:#6b4bb8;--neutral:#7a8099}
+@media(prefers-color-scheme:dark){:root{--bg:#14162b;--ink:#eceefb;--muted:#9aa0c4;--panel:#1d2040;--line:#32376a;--accent:#8a8dff}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,sans-serif;line-height:1.5}
+main{max-width:760px;margin:0 auto;padding:48px 20px 64px}
+h1{font-size:clamp(2.4rem,8vw,4rem);font-weight:800;letter-spacing:-.03em;line-height:1;margin:0 0 12px}
+h2{font-size:1rem;margin:24px 0 10px}
+.sub{color:var(--muted);margin:0 0 20px;max-width:46ch}
+textarea{width:100%;min-height:180px;padding:16px;border:1.5px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font:inherit;resize:vertical}
+textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
+button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:12px 22px;font:600 1rem "Bricolage Grotesque",system-ui,sans-serif;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
+.ghost{background:transparent;color:var(--muted);border:1.5px solid var(--line);padding:8px 14px;font-size:.9rem;text-transform:capitalize}
+.ex{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;color:var(--muted);font-size:.9rem}
+#err{color:var(--anger);margin-top:14px;min-height:1.5em}
+.card{background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:24px;margin-top:24px}
+#result{display:none}
+#top{font-size:clamp(2rem,7vw,3.2rem);font-weight:800;letter-spacing:-.02em;text-transform:capitalize;margin:0 0 16px}
+.bar{display:grid;grid-template-columns:90px 1fr 52px;gap:12px;align-items:center;margin:10px 0;font-size:.95rem}
+.bar .name{text-transform:capitalize}
+.track{height:12px;background:var(--bg);border-radius:6px;overflow:hidden}
+.fill{height:100%;width:0;border-radius:6px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.pct{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:4px 12px;border-radius:999px;background:var(--bg);border:1px solid var(--line);font-size:.9rem}
+.seg{flex:1;min-width:34px;padding:8px 4px;border-radius:6px;color:#fff;font-size:.78rem;text-align:center;text-transform:capitalize}
+#tl{display:flex;gap:4px}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+td:not(:first-child),th:not(:first-child){text-align:right}
+details{margin-top:24px}
+summary{cursor:pointer;font-weight:600}
+img{max-width:100%;border-radius:8px;background:#fff;margin-top:14px}
+.note{color:var(--muted);font-size:.88rem}
+@media(prefers-reduced-motion:reduce){.fill{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>What is this song feeling?</h1>
+  <p class="sub">Paste lyrics and the model scores them across five emotions.</p>
+  <div class="ex"><span>Try an example:</span><span id="exbtns" class="ex" style="margin:0"></span></div>
+  <textarea id="lyrics" aria-label="Song lyrics" placeholder="Paste lyrics here. Blank lines between verses show how the emotion shifts through the song."></textarea>
+  <div class="row">
+    <button id="go">Detect emotion</button>
+    <button id="clear" class="ghost" type="button">Clear</button>
+  </div>
+  <div id="err" role="alert"></div>
+
+  <section id="result" class="card" aria-live="polite">
+    <p id="top"></p>
+    <div id="bars"></div>
+    <h2>Words that pushed the result</h2>
+    <div id="words" class="chips"></div>
+    <div id="tlwrap"><h2>Through the song</h2><div id="tl"></div></div>
+  </section>
+
+  <details id="about">
+    <summary>About the model</summary>
+    <div class="card" id="aboutbody" style="margin-top:12px">Loading</div>
+  </details>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const col = e => `var(--${e in {joy:1,sadness:1,anger:1,trust:1,fear:1} ? e : 'neutral'})`;
+const EX = {
+  joy: "Sun is up and the whole street is singing\nI'm dancing with my friends, laughing out loud\nEverything is golden, I can't stop smiling\nThis is the best day, we're on top of the world",
+  sadness: "I sit alone in the rain tonight\nYou left and the house is so empty and cold\nTears keep falling, I miss you so much\nGoodbye is a word I can't say out loud",
+  anger: "I'm so done with your lies and your games\nYou broke it all, now you'll pay for it\nScreaming at the walls, I'm burning with rage\nDon't tell me sorry, I'll never forgive",
+  fear: "Footsteps in the dark, I can't breathe\nSomething is following me through the night\nTrembling, cold, I'm scared to look back\nPlease don't let it find me here"
+};
+$('exbtns').innerHTML = Object.keys(EX).map(k => `<button class="ghost" data-k="${k}">${k}</button>`).join('');
+$('exbtns').onclick = e => { if (e.target.dataset.k) $('lyrics').value = EX[e.target.dataset.k]; };
+
+$('go').onclick = async () => {
+  $('err').textContent = ''; $('go').disabled = true;
+  try {
+    const res = await fetch('/predict', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({lyrics: $('lyrics').value})});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+    render(data);
+  } catch (e) { $('err').textContent = e.message; $('result').style.display = 'none'; }
+  $('go').disabled = false;
+};
+$('clear').onclick = () => { $('lyrics').value = ''; $('result').style.display = 'none'; $('err').textContent = ''; };
+
+function render(d) {
+  $('top').textContent = d.emotion;
+  $('bars').innerHTML = d.scores.map(s => `<div class="bar"><span class="name">${s.emotion}</span>
+    <div class="track"><div class="fill" style="background:${col(s.emotion)}" data-w="${(s.probability*100).toFixed(1)}"></div></div>
+    <span class="pct">${(s.probability*100).toFixed(1)}%</span></div>`).join('');
+  $('words').innerHTML = d.top_words.length ? d.top_words.map(w => `<span class="chip">${w}</span>`).join('') : '<span class="note">No strong signal words.</span>';
+  $('tlwrap').style.display = d.timeline.length ? 'block' : 'none';
+  $('tl').innerHTML = d.timeline.map(t => `<div class="seg" style="background:${col(t.emotion)}" title="Part ${t.part}: ${t.emotion} (${Math.round(t.confidence*100)}%)">${t.emotion}</div>`).join('');
+  $('result').style.display = 'block';
+  requestAnimationFrame(() => document.querySelectorAll('.fill').forEach(f => f.style.width = f.dataset.w + '%'));
+}
+
+fetch('/metrics').then(r => r.json()).then(m => {
+  if (!m.cv_results) { $('aboutbody').textContent = 'Train the model to see its metrics.'; return; }
+  const rows = Object.entries(m.cv_results).map(([k,v]) => `<tr><td>${k}</td><td>${v.macro_f1}</td><td>${v.accuracy}</td></tr>`).join('');
+  $('aboutbody').innerHTML = `<p class="note">${m.n_songs} songs from ${m.n_artists} artists. Labels come from the NRC Emotion Lexicon, not from human listeners.
+    Scores below use 5-fold cross-validation where no artist appears in both training and test folds.</p>
+    <table><tr><th>Model</th><th>Macro F1</th><th>Accuracy</th></tr>${rows}</table>
+    <p class="note">On held-out artists the chosen Logistic Regression reached ${m.heldout.accuracy} accuracy and ${m.heldout.macro_f1} macro F1 (most songs are joy, so macro F1 is the fairer figure).</p>
+    <img src="/static/confusion_matrix.png" alt="Confusion matrix on held-out artists">`;
+});
+</script>
+</body>
+</html>
